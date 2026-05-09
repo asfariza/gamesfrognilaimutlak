@@ -623,7 +623,13 @@
             { q: "Domain (daerah asal) dari grafik fungsi f(x) = |x| adalah...", opts: ["Semua bilangan real", "x ≥ 0", "x ≤ 0", "x > 0"], ans: 0 },
             { q: "Range (daerah hasil) dari grafik fungsi f(x) = |x| adalah...", opts: ["y ≥ 0", "Semua bilangan real", "y ≤ 0", "y > 0"], ans: 0 },
             { q: "Fungsi grafik nilai mutlak yang puncaknya di (1, 2) & terbuka ke atas adalah...", opts: ["f(x) = |x - 1| + 2", "f(x) = |x + 1| + 2", "f(x) = |x - 1| - 2", "f(x) = |x + 1| - 2"], ans: 0 },
-            { q: "Grafik f(x) = -|x - 2| + 3 memiliki nilai maksimum sebesar...", opts: ["3", "2", "-2", "-3"], ans: 0 }
+            { q: "Grafik f(x) = -|x - 2| + 3 memiliki nilai maksimum sebesar...", opts: ["3", "2", "-2", "-3"], ans: 0 },
+            // 5 SOAL BARU
+            { q: "Titik puncak grafik fungsi f(x) = |x - 2| + 3 adalah...", opts: ["(2, 3)", "(-2, 3)", "(2, -3)", "(-2, -3)"], ans: 0 },
+            { q: "Grafik f(x) = |3x + 6| memotong sumbu-y pada koordinat...", opts: ["(0, 6)", "(0, -6)", "(-2, 0)", "(2, 0)"], ans: 0 },
+            { q: "Persamaan grafik nilai mutlak dengan titik puncak (-1, 0) dan terbuka ke atas adalah...", opts: ["f(x) = |x + 1|", "f(x) = |x - 1|", "f(x) = |x| + 1", "f(x) = |x| - 1"], ans: 0 },
+            { q: "Grafik fungsi f(x) = |x + 3| simetris terhadap garis vertikal...", opts: ["x = -3", "x = 3", "y = -3", "y = 3"], ans: 0 },
+            { q: "Berapa banyak titik potong grafik f(x) = |x| + 2 terhadap sumbu-x?", opts: ["Tidak ada (0)", "Satu", "Dua", "Tak hingga"], ans: 0 }
         ];
 
         /* --- AUDIO SYSTEM (Web Audio API) --- */
@@ -1109,7 +1115,12 @@
         ];
 
         async function saveScore(name, score) {
-            const scoreData = { name: name, score: score, date: new Date().getTime() };
+            // Buat format tanggal dan waktu (DD/MM/YYYY HH:mm:ss)
+            const now = new Date();
+            const pad = (num) => String(num).padStart(2, '0');
+            const formattedDate = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+            
+            const scoreData = { name: name, score: score, date: formattedDate };
             
             // 1. Simpan ke Local Storage (Cepat & Offline)
             leaderboardData.push(scoreData);
