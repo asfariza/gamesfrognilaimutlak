@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Froggy Math: Nilai Mutlak</title>
+    <style>
+        /* CSS RESET & VARIABLES */
+        :root {
+            --primary: #4CAF50;
+            --water-top: #2196F3;
+            --water-bottom: #0D47A1;
+            --leaf: #388E3C;
+            --leaf-hover: #4CAF50;
+            --text-light: #ffffff;
+            --text-dark: #333333;
+            --bg-sky: #87CEEB;
+            --ui-bg: rgba(255, 255, 255, 0.9);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: var(--bg-sky);
+        }
+
+        /* RAIN CANVAS */
+        #rainCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+            opacity: 0.6;
+        }
+
+        /* HEADER UI */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 100;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.4), transparent);
+            color: white;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+        }
+
+        header h1 {
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .controls button {
+            background: rgba(255, 255, 255, 0.3);
+            border: 2px solid white;
+            color: white;
+            font-size: 1.2rem;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-left: 10px;
+            transition: 0.2s;
+        }
+
+        .controls button:hover {
+            background: rgba(255, 255, 255, 0.5);
+            transform: scale(1.1);
+        }
+
+        /* LOGIN SCREEN */
+        #login-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--ui-bg);
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 60;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border: 4px solid var(--primary);
+            transition: all 0.5s ease;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        #login-screen h2 {
+            color: var(--text-dark);
+            margin-bottom: 20px;
+            font-size: 2rem;
+        }
+
+        #login-screen input {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 15px;
+            border: 2px solid #ccc;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        #login-screen input:focus {
+            border-color: var(--primary);
+        }
+
+        #login-screen button {
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        /* MAIN MENU */
+        #menu {
+            display: none;
+            opacity: 0;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #e8f5e9; /* Warna hijau muda (sebelumnya var(--ui-bg)) */
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            z-index: 50;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            border: 4px solid var(--primary);
+            transition: all 0.5s ease;
+        }
+
+        #menu h2 {
+            color: var(--text-dark);
+            margin-bottom: 20px;
+            font-size: 2rem;
+        }
+
+        .mode-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .mode-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #2E7D32;
+            transition: 0.1s;
+        }
+
+        .mode-btn:active {
+            transform: translateY(5px);
+            box-shadow: 0 0 0 #2E7D32;
+        }
+
+        /* GAME CONTAINER */
+        #game-wrapper {
+            width: 100%;
+            height: 100%;
+            padding: 60px 10px 10px 10px; /* Space for header */
+            display: none;
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            z-index: 10;
+            position: relative;
+        }
+
+        #game-grid {
+            width: 100%;
+            height: 100%;
+            display: grid;
+            gap: 10px;
+        }
+
+        /* GRID LAYOUTS */
+        .layout-solo { grid-template-columns: 1fr; grid-template-rows: 1fr; }
+        .layout-duel { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; }
+        .layout-squad { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+
+        @media (max-width: 768px) {
+            .layout-duel { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; }
+            /* On mobile squad, allow scrolling */
+            #game-wrapper.mobile-squad { padding-bottom: 20px; overflow-y: auto; pointer-events: auto; }
+            .layout-squad { grid-template-columns: 1fr; grid-template-rows: repeat(4, 50vh); }
+        }
+
+        /* PLAYER BOARD */
+        .player-board {
+            position: relative;
+            background: linear-gradient(to bottom, #a1e2f7, var(--water-top));
+            border-radius: 15px;
+            overflow: hidden;
+            border: 3px solid #fff;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .player-header {
+            background: rgba(255,255,255,0.8);
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: bold;
+            color: var(--text-dark);
+            z-index: 2;
+            border-bottom: 2px solid rgba(0,0,0,0.1);
+        }
+
+        .question-box {
+            background: rgba(255, 255, 255, 0.95);
+            margin: 10px auto;
+            padding: 15px;
+            border-radius: 15px;
+            width: 90%;
+            text-align: center;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--text-dark);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            z-index: 2;
+            border: 2px solid var(--primary);
+        }
+
+        .game-area {
+            flex-grow: 1;
+            position: relative;
+        }
+
+        /* LEAVES */
+        .leaves-container {
+            position: absolute;
+            top: 10%;
+            left: 0;
+            width: 100%;
+            height: 60%;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: 1fr 1fr;
+            gap: 15px;
+            padding: 20px;
+            z-index: 2;
+        }
+
+        .leaf-wrapper {
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.5s ease;
+        }
+
+        .leaf {
+            width: 100px;
+            height: 60px;
+            background: var(--leaf);
+            border-radius: 50% 0 50% 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: inset -5px -5px 10px rgba(0,0,0,0.2), 0 5px 10px rgba(0,0,0,0.3);
+            transition: 0.2s;
+            text-align: center;
+            padding: 5px;
+            border: 2px solid #558b2f;
+        }
+
+        .leaf:hover {
+            background: var(--leaf-hover);
+            transform: scale(1.05);
+        }
+
+        .leaf:active {
+            transform: scale(0.95);
+        }
+
+        /* FROG */
+        .frog-container {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70px;
+            height: 70px;
+            z-index: 3;
+            transition: transform 0.5s ease-in-out, opacity 0.5s ease;
+            filter: drop-shadow(0 5px 5px rgba(0,0,0,0.5));
+        }
+
+        /* WATER EFFECTS */
+        .water-bg {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            height: 35%;
+            background: var(--water-bottom);
+            z-index: 1;
+        }
+
+        .wave {
+            position: absolute;
+            top: -20px;
+            left: 0;
+            width: 200%;
+            height: 40px;
+            background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 1200 120" xmlns="http://www.w3.org/2000/svg"><path d="M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z" fill="%230D47A1" opacity=".5"/><path d="M0,0V15.81C13,36.92,27.64,56.86,47.69,72.05,99.41,111.27,165,111,224.58,91.58c31.15-10.15,60.09-26.07,89.67-39.8,40.92-19,84.73-46,130.83-49.67,36.26-2.85,70.9,9.42,98.6,31.56,31.77,25.39,62.32,62,103.63,73,40.44,10.79,81.35-6.69,119.13-24.28s75.16-39,116.92-43.05c59.73-5.85,113.28,22.88,168.9,38.84,30.2,8.66,59,6.17,87.09-7.5V0Z" fill="%232196F3"/></svg>') repeat-x;
+            background-size: 50% 100%;
+            animation: waveAnimation 5s linear infinite;
+        }
+
+        @keyframes waveAnimation {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+
+        /* ANIMATIONS */
+        @keyframes bounce {
+            0%, 100% { transform: scale(1) translateY(0); }
+            50% { transform: scale(1.2) translateY(-10px); }
+        }
+
+        @keyframes sink {
+            0% { transform: scale(1) translateY(0) rotate(0deg); opacity: 1; }
+            100% { transform: scale(0.5) translateY(50px) rotate(45deg); opacity: 0; }
+        }
+
+        @keyframes ripple {
+            0% { width: 0; height: 0; opacity: 1; }
+            100% { width: 150px; height: 75px; opacity: 0; }
+        }
+
+        .ripple-effect {
+            position: absolute;
+            border: 4px solid white;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            animation: ripple 0.8s ease-out;
+            pointer-events: none;
+            z-index: 4;
+        }
+
+        .splash-particle {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* GAME OVER SCREEN */
+        .game-over-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            z-index: 20;
+            opacity: 0;
+            pointer-events: none;
+            transition: 0.5s;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .game-over-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .game-over-overlay h3 { font-size: 2rem; margin-bottom: 10px; color: var(--primary); }
+        .game-over-overlay p { font-size: 1.2rem; margin-bottom: 20px; }
+        .game-over-overlay button {
+            background: var(--primary); border: none; padding: 10px 20px;
+            color: white; font-size: 1.2rem; border-radius: 8px; cursor: pointer;
+        }
+
+        /* LEADERBOARD MODAL */
+        #leaderboard-modal {
+            display: none;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 200; justify-content: center; align-items: center;
+            opacity: 0; transition: opacity 0.3s ease;
+        }
+
+        .leaderboard-content {
+            background: var(--ui-bg); width: 90%; max-width: 500px;
+            border-radius: 20px; padding: 25px; text-align: center;
+            border: 4px solid #9C27B0;
+            max-height: 90vh; display: flex; flex-direction: column;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            transform: translateY(-20px); transition: transform 0.3s ease;
+        }
+
+        #leaderboard-modal.show {
+            opacity: 1;
+        }
+
+        #leaderboard-modal.show .leaderboard-content {
+            transform: translateY(0);
+        }
+
+        .podium-container {
+            display: flex; justify-content: center; align-items: flex-end;
+            gap: 10px; margin-top: 20px; height: 180px;
+        }
+
+        .podium-slot {
+            display: flex; flex-direction: column; align-items: center; width: 30%;
+        }
+
+        .podium-bar {
+            width: 100%; display: flex; justify-content: center; align-items: center;
+            font-size: 2.5rem; font-weight: bold; color: white; 
+            border-radius: 10px 10px 0 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            box-shadow: inset 0 5px 15px rgba(255,255,255,0.4);
+        }
+
+        .podium-1 .podium-bar { height: 130px; background: linear-gradient(to bottom, #FFD700, #DAA520); }
+        .podium-2 .podium-bar { height: 95px; background: linear-gradient(to bottom, #E0E0E0, #A9A9A9); }
+        .podium-3 .podium-bar { height: 65px; background: linear-gradient(to bottom, #CD7F32, #8B4513); }
+
+        .podium-name { 
+            font-weight: bold; margin-bottom: 2px; font-size: 0.85rem; 
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%; 
+            color: var(--text-dark);
+        }
+
+        .podium-score { 
+            color: var(--primary); font-weight: bold; font-size: 1.1rem; margin-bottom: 5px;
+        }
+        
+        .leaderboard-list {
+            margin-top: 20px; flex-grow: 1; overflow-y: auto; text-align: left;
+            border-top: 2px solid #ccc; padding-top: 10px;
+            max-height: 200px;
+        }
+
+        .lb-item {
+            display: flex; justify-content: space-between; padding: 12px 10px;
+            border-bottom: 1px solid #ddd; font-weight: bold; color: var(--text-dark);
+            background: rgba(255,255,255,0.5);
+            border-radius: 5px; margin-bottom: 5px;
+        }
+
+        .lb-item:hover { background: rgba(255,255,255,0.9); }
+
+        .close-lb-btn {
+            margin-top: 15px; background: #e53935; color: white; border: none;
+            padding: 12px 20px; border-radius: 10px; cursor: pointer; font-size: 1.1rem;
+            font-weight: bold; box-shadow: 0 4px 0 #b71c1c; transition: 0.1s;
+        }
+
+        .close-lb-btn:active { transform: translateY(4px); box-shadow: 0 0 0 #b71c1c; }
+
+        /* CREDITS & SOCIALS */
+        .credits {
+            margin-top: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .credits p {
+            font-weight: bold;
+            color: var(--text-dark);
+            font-size: 1rem;
+            text-shadow: 0 1px 2px rgba(255,255,255,0.8);
+        }
+
+        .social-links {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .social-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            transition: all 0.3s;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            text-decoration: none;
+        }
+
+        .social-btn.ig:hover {
+            background-color: #fce7f3;
+            color: #db2777;
+            transform: scale(1.1);
+        }
+
+        .social-btn.tt:hover {
+            background-color: #dbeafe;
+            color: #3b82f6;
+            transform: scale(1.1);
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- Light Rain Animation Background -->
+    <canvas id="rainCanvas"></canvas>
+
+    <header>
+        <h1>🐸 Froggy Math</h1>
+        <div class="controls">
+            <button id="btn-audio" onclick="toggleAudio()" title="Toggle Audio">🔊</button>
+            <button id="btn-fullscreen" onclick="toggleFullScreen()" title="Full Screen">⛶</button>
+            <button onclick="backToMenu()" title="Kembali ke Menu">🏠</button>
+        </div>
+    </header>
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen">
+        <h2>Selamat Datang!</h2>
+        <form onsubmit="handleLogin(event)">
+            <input type="text" id="input-nama" placeholder="Masukkan Nama Lengkap" required autocomplete="off">
+            <input type="text" id="input-kelas" placeholder="Masukkan Kelas (Misal: XI IPA 1)" required autocomplete="off">
+            <button type="submit" class="mode-btn">Masuk</button>
+        </form>
+    </div>
+
+    <div id="menu">
+        <h2>Pilih Mode Permainan</h2>
+        <div class="mode-buttons">
+            <button class="mode-btn" onclick="startGame(1)">👤 Solo Mode (1 P)</button>
+            <button class="mode-btn" style="background:#1976D2; box-shadow: 0 5px 0 #0D47A1;" onclick="startGame(2)">⚔️ Duel Mode (2 P)</button>
+            <button class="mode-btn" style="background:#F57C00; box-shadow: 0 5px 0 #E65100;" onclick="startGame(4)">🛡️ Squad Mode (4 P)</button>
+            <button class="mode-btn" style="background:#9C27B0; box-shadow: 0 5px 0 #7B1FA2; margin-top: 10px;" onclick="showLeaderboard()">🏆 Papan Skor</button>
+        </div>
+        
+        <div class="credits">
+            <p>Karya : RizaasfaLabs</p>
+            <div class="social-links">
+                <a href="https://www.instagram.com/rizaasfa/" target="_blank" class="social-btn ig" title="Instagram">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
+                </a>
+                <a href="https://www.tiktok.com/@rizaasfa" target="_blank" class="social-btn tt" title="TikTok">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"></path></svg>
+                </a>
+            </div>
+            <p style="margin-top: 8px; font-size: 0.85rem; font-weight: normal; color: #64748b;">Riza Asfa, Guru Matematika SMAN 2 Harau</p>
+        </div>
+    </div>
+
+    <div id="game-wrapper">
+        <div id="game-grid">
+            <!-- Player boards will be injected here via JS -->
+        </div>
+    </div>
+
+    <!-- LEADERBOARD MODAL -->
+    <div id="leaderboard-modal">
+        <div class="leaderboard-content">
+            <h2 style="color: #9C27B0;">🏆 Papan Skor</h2>
+            <div class="podium-container" id="podium-container">
+                <!-- Podium inject here -->
+            </div>
+            <div class="leaderboard-list" id="leaderboard-list">
+                <!-- List inject here -->
+            </div>
+            <button class="close-lb-btn" onclick="hideLeaderboard()">Kembali</button>
+        </div>
+    </div>
+
+    <script>
+        /* --- GAME DATA: Grafik & Fungsi Nilai Mutlak --- */
+        const questionDatabase = [
+            { q: "Bentuk umum grafik fungsi nilai mutlak f(x) = |x| menyerupai huruf...", opts: ["V", "U", "W", "S"], ans: 0 },
+            { q: "Titik puncak (titik balik) dari grafik fungsi f(x) = |x| adalah...", opts: ["(0, 0)", "(1, 1)", "(-1, -1)", "(0, 1)"], ans: 0 },
+            { q: "Grafik fungsi f(x) = |x - 2| merupakan pergeseran grafik f(x) = |x| sejauh...", opts: ["2 satuan ke kanan", "2 satuan ke kiri", "2 satuan ke atas", "2 satuan ke bawah"], ans: 0 },
+            { q: "Jika grafik f(x) = |x| digeser 3 satuan ke atas, persamaannya menjadi...", opts: ["f(x) = |x| + 3", "f(x) = |x + 3|", "f(x) = |x| - 3", "f(x) = |x - 3|"], ans: 0 },
+            { q: "Titik puncak minimum dari grafik fungsi f(x) = |x + 4| - 1 adalah...", opts: ["(-4, -1)", "(4, -1)", "(-4, 1)", "(4, 1)"], ans: 0 },
+            { q: "Grafik fungsi f(x) = -|x| akan terbuka ke arah...", opts: ["Bawah", "Atas", "Kanan", "Kiri"], ans: 0 },
+            { q: "Sumbu simetri dari grafik fungsi f(x) = |x - 5| adalah garis...", opts: ["x = 5", "x = -5", "y = 5", "y = -5"], ans: 0 },
+            { q: "Titik potong grafik f(x) = |2x - 4| dengan sumbu-y adalah...", opts: ["(0, 4)", "(0, -4)", "(2, 0)", "(-2, 0)"], ans: 0 },
+            { q: "Titik potong grafik f(x) = |x - 3| dengan sumbu-x adalah...", opts: ["(3, 0)", "(-3, 0)", "(0, 3)", "(0, -3)"], ans: 0 },
+            { q: "Grafik f(x) = 2|x| dibandingkan dengan f(x) = |x| akan tampak lebih...", opts: ["Sempit/curam", "Lebar/landai", "Bergeser ke atas", "Bergeser ke bawah"], ans: 0 },
+            { q: "Grafik f(x) = |x| - 5 memotong sumbu-x di titik...", opts: ["(5,0) dan (-5,0)", "(0,5) dan (0,-5)", "(5,0) saja", "Tidak memotong sumbu-x"], ans: 0 },
+            { q: "Domain (daerah asal) dari grafik fungsi f(x) = |x| adalah...", opts: ["Semua bilangan real", "x ≥ 0", "x ≤ 0", "x > 0"], ans: 0 },
+            { q: "Range (daerah hasil) dari grafik fungsi f(x) = |x| adalah...", opts: ["y ≥ 0", "Semua bilangan real", "y ≤ 0", "y > 0"], ans: 0 },
+            { q: "Fungsi grafik nilai mutlak yang puncaknya di (1, 2) & terbuka ke atas adalah...", opts: ["f(x) = |x - 1| + 2", "f(x) = |x + 1| + 2", "f(x) = |x - 1| - 2", "f(x) = |x + 1| - 2"], ans: 0 },
+            { q: "Grafik f(x) = -|x - 2| + 3 memiliki nilai maksimum sebesar...", opts: ["3", "2", "-2", "-3"], ans: 0 }
+        ];
+
+        /* --- AUDIO SYSTEM (Web Audio API) --- */
+        let audioCtx;
+        let isAudioEnabled = true;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function playTone(freq, type, duration, vol=0.1) {
+            if (!isAudioEnabled || !audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        function playJumpSound() {
+            if(!isAudioEnabled) return;
+            playTone(400, 'sine', 0.1, 0.2);
+            setTimeout(() => playTone(600, 'sine', 0.15, 0.2), 100);
+        }
+
+        function playCorrectSound() {
+            if(!isAudioEnabled) return;
+            playTone(523.25, 'triangle', 0.1, 0.2); // C5
+            setTimeout(() => playTone(659.25, 'triangle', 0.1, 0.2), 100); // E5
+            setTimeout(() => playTone(783.99, 'triangle', 0.2, 0.2), 200); // G5
+        }
+
+        function playSplashSound() {
+            if (!isAudioEnabled || !audioCtx) return;
+            const bufferSize = audioCtx.sampleRate * 0.5; // 0.5 seconds
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1; // White noise
+            }
+            const noise = audioCtx.createBufferSource();
+            noise.buffer = buffer;
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(800, audioCtx.currentTime);
+            filter.frequency.exponentialRampToValueAtTime(100, audioCtx.currentTime + 0.5);
+            const gain = audioCtx.createGain();
+            gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+            noise.connect(filter);
+            filter.connect(gain);
+            gain.connect(audioCtx.destination);
+            noise.start();
+        }
+
+        function toggleAudio() {
+            isAudioEnabled = !isAudioEnabled;
+            const btn = document.getElementById('btn-audio');
+            btn.innerText = isAudioEnabled ? '🔊' : '🔇';
+            if (isAudioEnabled) initAudio();
+        }
+
+        function toggleFullScreen() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.log(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        /* --- RAIN EFFECT --- */
+        const canvas = document.getElementById('rainCanvas');
+        const ctx = canvas.getContext('2d');
+        let raindrops = [];
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function initRain() {
+            raindrops = [];
+            for (let i = 0; i < 100; i++) {
+                raindrops.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    l: Math.random() * 20 + 10,
+                    v: Math.random() * 10 + 5
+                });
+            }
+        }
+
+        function drawRain() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            for (let i = 0; i < raindrops.length; i++) {
+                let p = raindrops[i];
+                ctx.moveTo(p.x, p.y);
+                ctx.lineTo(p.x + p.l * 0.2, p.y + p.l);
+                p.y += p.v;
+                p.x += p.v * 0.2;
+                if (p.y > canvas.height) {
+                    p.y = -20;
+                    p.x = Math.random() * canvas.width;
+                }
+            }
+            ctx.stroke();
+            requestAnimationFrame(drawRain);
+        }
+        initRain();
+        drawRain();
+
+        /* --- UTILITY FUNCTIONS --- */
+        function shuffleArray(array) {
+            let curId = array.length;
+            while (0 !== curId) {
+                let randId = Math.floor(Math.random() * curId);
+                curId -= 1;
+                let tmp = array[curId];
+                array[curId] = array[randId];
+                array[randId] = tmp;
+            }
+            return array;
+        }
+
+        /* --- LOGIN SYSTEM --- */
+        let currentPlayerName = "Anonim";
+        let currentPlayerClass = "-";
+
+        function handleLogin(e) {
+            e.preventDefault(); // Mencegah reload halaman
+            const nama = document.getElementById('input-nama').value.trim();
+            const kelas = document.getElementById('input-kelas').value.trim();
+            
+            if (nama && kelas) {
+                currentPlayerName = nama;
+                currentPlayerClass = kelas;
+                
+                const loginScreen = document.getElementById('login-screen');
+                const menu = document.getElementById('menu');
+                
+                // Animasi transisi ke menu utama
+                loginScreen.style.opacity = '0';
+                setTimeout(() => {
+                    loginScreen.style.display = 'none';
+                    menu.style.display = 'block';
+                    // Memicu reflow agar transisi CSS berjalan
+                    void menu.offsetWidth;
+                    menu.style.opacity = '1';
+                }, 300);
+            }
+        }
+
+        /* --- GAME ENGINE --- */
+        let gameInstances = [];
+        const MAX_QUESTIONS = 10;
+
+        class PlayerGame {
+            constructor(id, containerElement) {
+                this.id = id;
+                this.container = containerElement;
+                this.score = 0;
+                this.qIndex = 0;
+                this.isAnimating = false;
+                this.isFinished = false; // Status penanda jika pemain sudah selesai
+                
+                // Select random 10 questions and deep copy to manipulate options
+                let shuffledDb = shuffleArray([...questionDatabase]).slice(0, MAX_QUESTIONS);
+                this.questions = shuffledDb.map(q => {
+                    let opts = q.opts.map((optText, idx) => ({ text: optText, isCorrect: idx === q.ans }));
+                    return { q: q.q, opts: shuffleArray(opts) };
+                });
+
+                this.buildUI();
+                this.loadQuestion();
+            }
+
+            buildUI() {
+                // Ilustrasi katak SVG dengan kaki
+                const frogSVG = `
+                    <svg viewBox="0 0 100 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+                        <g transform="translate(0, 2)">
+                            <!-- Kaki Belakang -->
+                            <ellipse cx="25" cy="65" rx="15" ry="25" fill="#2E7D32" transform="rotate(45 25 65)"/>
+                            <ellipse cx="75" cy="65" rx="15" ry="25" fill="#2E7D32" transform="rotate(-45 75 65)"/>
+                            <ellipse cx="15" cy="85" rx="12" ry="6" fill="#1B5E20" />
+                            <ellipse cx="85" cy="85" rx="12" ry="6" fill="#1B5E20" />
+                            <!-- Badan -->
+                            <ellipse cx="50" cy="60" rx="35" ry="28" fill="#4CAF50"/>
+                            <ellipse cx="50" cy="65" rx="25" ry="15" fill="#A5D6A7"/>
+                            <!-- Kaki Depan -->
+                            <rect x="35" y="60" width="8" height="30" rx="4" fill="#388E3C" />
+                            <rect x="57" y="60" width="8" height="30" rx="4" fill="#388E3C" />
+                            <ellipse cx="39" cy="90" rx="8" ry="4" fill="#1B5E20" />
+                            <ellipse cx="61" cy="90" rx="8" ry="4" fill="#1B5E20" />
+                            <!-- Mata -->
+                            <circle cx="35" cy="35" r="14" fill="#4CAF50"/>
+                            <circle cx="65" cy="35" r="14" fill="#4CAF50"/>
+                            <circle cx="35" cy="35" r="8" fill="white"/>
+                            <circle cx="65" cy="35" r="8" fill="white"/>
+                            <circle cx="35" cy="35" r="3" fill="black"/>
+                            <circle cx="65" cy="35" r="3" fill="black"/>
+                            <!-- Mulut & Pipi -->
+                            <path d="M 40 60 Q 50 70 60 60" stroke="#1B5E20" stroke-width="2" fill="none" stroke-linecap="round"/>
+                            <ellipse cx="28" cy="55" rx="5" ry="3" fill="#FF8A65" opacity="0.6"/>
+                            <ellipse cx="72" cy="55" rx="5" ry="3" fill="#FF8A65" opacity="0.6"/>
+                        </g>
+                    </svg>
+                `;
+
+                this.container.innerHTML = `
+                    <div class="player-header">
+                        <span>Pemain ${this.id}</span>
+                        <span>Skor: <span id="score-${this.id}">0</span>/100</span>
+                    </div>
+                    <div class="game-area" id="area-${this.id}">
+                        <div class="question-box" id="qbox-${this.id}">Memuat soal...</div>
+                        <div class="leaves-container" id="leaves-${this.id}"></div>
+                        <div class="water-bg"><div class="wave"></div></div>
+                        <div class="frog-container" id="frog-${this.id}">${frogSVG}</div>
+                    </div>
+                    <div class="game-over-overlay" id="go-${this.id}">
+                        <h3>Selesai!</h3>
+                        <p>Skor Akhir: <span id="finalScore-${this.id}">0</span></p>
+                    </div>
+                `;
+                this.frog = document.getElementById(`frog-${this.id}`);
+                this.leavesContainer = document.getElementById(`leaves-${this.id}`);
+                this.qBox = document.getElementById(`qbox-${this.id}`);
+                this.area = document.getElementById(`area-${this.id}`);
+            }
+
+            loadQuestion() {
+                if (this.qIndex >= MAX_QUESTIONS) {
+                    this.endGame();
+                    return;
+                }
+
+                let currentQ = this.questions[this.qIndex];
+                this.qBox.innerText = `Soal ${this.qIndex + 1}: ${currentQ.q}`;
+                
+                this.leavesContainer.innerHTML = '';
+                
+                currentQ.opts.forEach((opt, idx) => {
+                    let wrapper = document.createElement('div');
+                    wrapper.className = 'leaf-wrapper';
+                    
+                    let leaf = document.createElement('div');
+                    leaf.className = 'leaf';
+                    // Simplify long text for mobile/small boxes
+                    let displayText = opt.text;
+                    if(displayText.length > 20) {
+                        leaf.style.fontSize = "0.8rem";
+                    }
+                    leaf.innerText = displayText;
+                    
+                    leaf.onclick = () => this.handleJump(leaf, wrapper, opt.isCorrect);
+                    
+                    wrapper.appendChild(leaf);
+                    this.leavesContainer.appendChild(wrapper);
+                });
+
+                // Reset frog position
+                this.frog.style.transition = 'none';
+                this.frog.style.transform = 'translateX(-50%) translateY(0)';
+                this.frog.style.opacity = '1';
+                this.frog.style.animation = 'none';
+                
+                // Force reflow
+                void this.frog.offsetWidth;
+            }
+
+            handleJump(leafElement, wrapperElement, isCorrect) {
+                if (this.isAnimating) return;
+                this.isAnimating = true;
+
+                initAudio();
+                playJumpSound();
+
+                // Get coordinates relative to game area
+                let areaRect = this.area.getBoundingClientRect();
+                let leafRect = leafElement.getBoundingClientRect();
+                let frogRect = this.frog.getBoundingClientRect();
+
+                // Calculate center points
+                let leafCenterX = leafRect.left + leafRect.width/2 - areaRect.left;
+                let leafCenterY = leafRect.top + leafRect.height/2 - areaRect.top;
+                
+                let startX = areaRect.width / 2;
+                let startY = areaRect.height - 40; // Approx frog bottom pos
+
+                let dx = leafCenterX - startX;
+                let dy = leafCenterY - startY;
+
+                // Move frog
+                this.frog.style.transition = 'transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+                this.frog.style.transform = `translateX(calc(-50% + ${dx}px)) translateY(${dy}px)`;
+
+                setTimeout(() => {
+                    if (isCorrect) {
+                        this.score += 10;
+                        document.getElementById(`score-${this.id}`).innerText = this.score;
+                        playCorrectSound();
+                        
+                        // Bounce animation on leaf
+                        wrapperElement.style.animation = 'bounce 0.5s ease';
+                        this.frog.style.animation = 'bounce 0.5s ease';
+
+                        setTimeout(() => {
+                            this.qIndex++;
+                            this.isAnimating = false;
+                            this.loadQuestion();
+                        }, 600);
+
+                    } else {
+                        playSplashSound();
+                        this.createSplashEffect(leafCenterX, leafCenterY);
+                        
+                        // Sink animation
+                        this.frog.style.transition = 'transform 0.5s ease-in, opacity 0.5s ease-in';
+                        this.frog.style.transform = `translateX(calc(-50% + ${dx}px)) translateY(${dy + 100}px) scale(0.5) rotate(45deg)`;
+                        this.frog.style.opacity = '0';
+                        
+                        // Drop the leaf to indicate it's sinking too
+                        wrapperElement.style.transform = 'translateY(100px) scale(0.5)';
+                        wrapperElement.style.opacity = '0';
+
+                        setTimeout(() => {
+                            this.qIndex++;
+                            this.isAnimating = false;
+                            this.loadQuestion();
+                        }, 1000);
+                    }
+                }, 400); // Wait for jump CSS transition
+            }
+
+            createSplashEffect(x, y) {
+                // Ripple
+                let ripple = document.createElement('div');
+                ripple.className = 'ripple-effect';
+                ripple.style.left = `${x}px`;
+                ripple.style.top = `${y + 20}px`;
+                this.area.appendChild(ripple);
+
+                // Particles
+                for (let i = 0; i < 8; i++) {
+                    let particle = document.createElement('div');
+                    particle.className = 'splash-particle';
+                    particle.style.left = `${x}px`;
+                    particle.style.top = `${y + 20}px`;
+                    
+                    let angle = Math.random() * Math.PI; // Upper half
+                    let distance = Math.random() * 40 + 20;
+                    let tx = Math.cos(angle) * distance;
+                    let ty = -Math.sin(angle) * distance;
+
+                    particle.style.transition = 'all 0.4s cubic-bezier(0.1, 0.8, 0.3, 1)';
+                    this.area.appendChild(particle);
+
+                    // Trigger animation next frame
+                    setTimeout(() => {
+                        particle.style.transform = `translate(${tx}px, ${ty}px) scale(0)`;
+                        particle.style.opacity = '0';
+                    }, 10);
+
+                    setTimeout(() => particle.remove(), 400);
+                }
+                setTimeout(() => ripple.remove(), 800);
+            }
+
+            endGame() {
+                this.isFinished = true; // Tandai pemain ini sudah selesai
+                let overlay = document.getElementById(`go-${this.id}`);
+                document.getElementById(`finalScore-${this.id}`).innerText = this.score;
+                overlay.classList.add('active');
+                
+                // Simpan skor otomatis ke papan skor dengan Nama dan Kelas
+                let modeName = gameInstances.length === 1 ? "Solo" : (gameInstances.length === 2 ? "Duel" : "Squad");
+                let playerName = gameInstances.length === 1 
+                    ? `${currentPlayerName} (${currentPlayerClass})` 
+                    : `${currentPlayerName} P${this.id} (${currentPlayerClass})`;
+                
+                saveScore(playerName, this.score);
+
+                // Cek apakah semua pemain di arena sudah selesai bermain
+                if (gameInstances.every(game => game.isFinished)) {
+                    // Beri jeda 2 detik agar pemain bisa melihat skor akhirnya terlebih dahulu
+                    setTimeout(() => {
+                        // Pastikan pemain belum menekan tombol 'Home' (array game masih ada)
+                        if (gameInstances.length > 0) {
+                            showLeaderboard();
+                        }
+                    }, 2000);
+                }
+            }
+        }
+
+        /* --- GAME MANAGER --- */
+        function startGame(playerCount) {
+            initAudio();
+            const menu = document.getElementById('menu');
+            const wrapper = document.getElementById('game-wrapper');
+            const grid = document.getElementById('game-grid');
+
+            // UI Transition
+            menu.style.opacity = '0';
+            menu.style.pointerEvents = 'none';
+            setTimeout(() => {
+                menu.style.display = 'none';
+                wrapper.style.display = 'block';
+                // Trigger reflow
+                void wrapper.offsetWidth;
+                wrapper.style.opacity = '1';
+            }, 300);
+
+            // Setup Grid Class
+            grid.className = '';
+            wrapper.className = '';
+            if (playerCount === 1) grid.classList.add('layout-solo');
+            if (playerCount === 2) grid.classList.add('layout-duel');
+            if (playerCount === 4) {
+                grid.classList.add('layout-squad');
+                if(window.innerWidth <= 768) wrapper.classList.add('mobile-squad');
+            }
+
+            // Clear previous games
+            grid.innerHTML = '';
+            gameInstances = [];
+
+            // Instantiate Players
+            for (let i = 1; i <= playerCount; i++) {
+                let boardDiv = document.createElement('div');
+                boardDiv.className = 'player-board';
+                boardDiv.id = `board-${i}`;
+                grid.appendChild(boardDiv);
+                
+                gameInstances.push(new PlayerGame(i, boardDiv));
+            }
+        }
+
+        function backToMenu() {
+            const menu = document.getElementById('menu');
+            const wrapper = document.getElementById('game-wrapper');
+            
+            wrapper.style.opacity = '0';
+            setTimeout(() => {
+                wrapper.style.display = 'none';
+                menu.style.display = 'block';
+                void menu.offsetWidth;
+                menu.style.opacity = '1';
+                menu.style.pointerEvents = 'auto';
+                
+                // Clear grid to save memory
+                document.getElementById('game-grid').innerHTML = '';
+                gameInstances = [];
+            }, 500);
+        }
+
+        /* --- LEADERBOARD SYSTEM --- */
+        // Masukkan URL Web App Google Apps Script Anda di sini:
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbyp1eKtfUpKWaL8gttcjRm5jmKxOTOE0E7ZT5rWJhceOtK9EKszV7-GDsGZawqDAZAg/exec"; 
+
+        // Memuat skor dari localStorage sebagai backup (Offline mode)
+        let leaderboardData = JSON.parse(localStorage.getItem('froggyLeaderboard')) || [
+            { name: "Master Katak", score: 100 },
+            { name: "Si Lincah", score: 80 }
+        ];
+
+        async function saveScore(name, score) {
+            const scoreData = { name: name, score: score, date: new Date().getTime() };
+            
+            // 1. Simpan ke Local Storage (Cepat & Offline)
+            leaderboardData.push(scoreData);
+            leaderboardData.sort((a, b) => b.score - a.score);
+            localStorage.setItem('froggyLeaderboard', JSON.stringify(leaderboardData));
+
+            // 2. Simpan ke Google Sheets via GAS (Online)
+            if (GAS_URL !== "URL_WEB_APP_ANDA_DISINI") {
+                try {
+                    await fetch(GAS_URL, {
+                        method: 'POST',
+                        // Gunakan text/plain untuk menghindari error preflight (CORS) di Google Apps Script
+                        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                        body: JSON.stringify(scoreData)
+                    });
+                    console.log("Skor berhasil disimpan ke cloud!");
+                } catch (e) {
+                    console.error("Gagal menyimpan ke cloud:", e);
+                }
+            }
+        }
+
+        async function showLeaderboard() {
+            const modal = document.getElementById('leaderboard-modal');
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('show'), 10);
+            
+            // Tampilkan data lokal terlebih dahulu (Optimistic UI)
+            renderLeaderboard();
+
+            // Ambil data terbaru dari Google Sheets jika URL sudah diisi
+            if (GAS_URL !== "URL_WEB_APP_ANDA_DISINI") {
+                try {
+                    document.getElementById('leaderboard-list').innerHTML = '<p style="text-align:center; color: #666;">Memuat skor global...</p>';
+                    
+                    const response = await fetch(GAS_URL);
+                    const cloudData = await response.json();
+                    
+                    if (cloudData && cloudData.length > 0) {
+                        leaderboardData = cloudData.map(item => ({
+                            name: item.name || "Anonim",
+                            score: parseInt(item.score) || 0,
+                            date: item.date || 0
+                        }));
+                        // Simpan hasil sinkronisasi ke local storage
+                        leaderboardData.sort((a, b) => b.score - a.score);
+                        localStorage.setItem('froggyLeaderboard', JSON.stringify(leaderboardData));
+                        renderLeaderboard();
+                    }
+                } catch (e) {
+                    console.error("Gagal memuat data cloud:", e);
+                    renderLeaderboard(); // Fallback jika gagal (render lokal lagi)
+                }
+            }
+        }
+
+        function hideLeaderboard() {
+            const modal = document.getElementById('leaderboard-modal');
+            modal.classList.remove('show');
+            setTimeout(() => modal.style.display = 'none', 300);
+        }
+
+        function renderLeaderboard() {
+            // Pastikan data terurut
+            leaderboardData.sort((a, b) => b.score - a.score);
+            const podiumCont = document.getElementById('podium-container');
+            const listCont = document.getElementById('leaderboard-list');
+            
+            podiumCont.innerHTML = '';
+            listCont.innerHTML = '';
+
+            if (leaderboardData.length === 0) {
+                listCont.innerHTML = '<p style="text-align:center">Belum ada skor.</p>';
+                return;
+            }
+
+            let p1 = leaderboardData[0];
+            let p2 = leaderboardData[1];
+            let p3 = leaderboardData[2];
+
+            // Render Podium (Urutan: 2 - 1 - 3 untuk tampilan visual)
+            if(p2) podiumCont.innerHTML += createPodiumHTML(p2, 2);
+            if(p1) podiumCont.innerHTML += createPodiumHTML(p1, 1);
+            if(p3) podiumCont.innerHTML += createPodiumHTML(p3, 3);
+
+            // Render list untuk peringkat ke-4 dan seterusnya
+            for(let i = 3; i < leaderboardData.length; i++) {
+                listCont.innerHTML += `
+                    <div class="lb-item">
+                        <span>#${i+1} ${leaderboardData[i].name}</span>
+                        <span>⭐ ${leaderboardData[i].score}</span>
+                    </div>
+                `;
+            }
+        }
+
+        function createPodiumHTML(data, rank) {
+            return `
+                <div class="podium-slot podium-${rank}">
+                    <div class="podium-name" title="${data.name}">${data.name}</div>
+                    <div class="podium-score">⭐ ${data.score}</div>
+                    <div class="podium-bar">${rank}</div>
+                </div>
+            `;
+        }
+
+    </script>
+</body>
+</html>
